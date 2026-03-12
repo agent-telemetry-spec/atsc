@@ -1,0 +1,86 @@
+{
+  "$schema": "https://agent-telemetry-spec.github.io/atsc/schemas/v0.1.0/agent-telemetry-event.json",
+  "spec_version": "0.1.0",
+  "event_id": "01HZ3456789012CDEFGHIJKL",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "span_id": "b2c3d4e5f6071234",
+  "parent_span_id": "a1b2c3d4e5f60123",
+  "span_kind": "tool.call",
+  "timestamp": "2026-03-12T09:00:01.200Z",
+  "start_time": "2026-03-12T09:00:01.200Z",
+  "end_time": "2026-03-12T09:00:01.834Z",
+  "status": "ok",
+  "resource": {
+    "service.name": "my-agent",
+    "service.version": "1.0.0",
+    "deployment.environment": "production",
+    "cloud.provider": "azure",
+    "cloud.region": "eastus"
+  },
+  "run": {
+    "id": "run_abc123",
+    "kind": "agent",
+    "name": "customer-support-agent",
+    "attempt": 1
+  },
+  "session": {
+    "id": "sess_xyz789",
+    "kind": "interactive",
+    "state": "active",
+    "participant": {
+      "user_id": "user_42",
+      "user_role": "customer",
+      "anonymous": false,
+      "channel": "web"
+    }
+  },
+  "caller": {
+    "type": "agent",
+    "id": "agent_support_01",
+    "name": "SupportAgent",
+    "framework": "agent_framework",
+    "version": "1.0.0"
+  },
+  "executor": {
+    "type": "tool",
+    "id": "tool_order_lookup",
+    "name": "OrderLookupTool"
+  },
+  "tool": {
+    "name": "order_lookup",
+    "type": "function",
+    "version": "2.1.0",
+    "target": "https://api.internal/orders",
+    "success": true
+  },
+  "input": {
+    "mime_type": "application/json",
+    "value": "{\"order_id\": \"ORD-98765\"}"
+  },
+  "output": {
+    "mime_type": "application/json",
+    "value": "{\"order_id\": \"ORD-98765\", \"status\": \"shipped\", \"eta\": \"2026-03-14\"}"
+  },
+  "span_events": [
+    {
+      "name": "tool.invoked",
+      "timestamp": "2026-03-12T09:00:01.200Z",
+      "sequence": 0,
+      "attributes": {
+        "tool.name": "order_lookup",
+        "tool.reason": "user requested order status"
+      }
+    },
+    {
+      "name": "tool.result",
+      "timestamp": "2026-03-12T09:00:01.834Z",
+      "sequence": 1,
+      "attributes": {
+        "tool.name": "order_lookup"
+      }
+    }
+  ],
+  "attributes": {
+    "atsc.example": "full-conformance"
+  }
+}
