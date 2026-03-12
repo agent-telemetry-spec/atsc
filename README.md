@@ -2,7 +2,7 @@
 
 **Version:** 0.1.0 — Draft  
 **License:** Apache 2.0  
-**Schema:** `https://agent-telemetry-spec.github.io/schemas/agent-telemetry-event/v0.1.0.json`  
+**Schema:** `https://agent-telemetry-spec.github.io/atsc/schemas/v0.1.0/agent-telemetry-event.json`  
 **Authors:** Jesse Williams, [thegoo](https://github.com/thegoo)
 
 ---
@@ -108,7 +108,7 @@ Twelve fields. That's Core conformance.
 
 ```bash
 npx ajv-cli validate \
-  -s https://agent-telemetry-spec.github.io/schemas/agent-telemetry-event/v0.1.0.json \
+  -s https://agent-telemetry-spec.github.io/atsc/schemas/v0.1.0/agent-telemetry-event.json \
   -d your-span.json
 ```
 

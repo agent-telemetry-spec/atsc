@@ -1,7 +1,7 @@
 # Agent Telemetry Semantic Conventions (ATSC)
 **Version:** 0.1.0  
 **Status:** Draft  
-**Schema ID:** `https://agent-telemetry-spec.github.io/schemas/agent-telemetry-event/v0.1.0.json`  
+**Schema ID:** `https://agent-telemetry-spec.github.io/atsc/schemas/v0.1.0/agent-telemetry-event.json`  
 **License:** Apache 2.0  
 
 ---
@@ -1036,7 +1036,7 @@ Redaction is an exporter concern, not a schema concern. The schema records what 
 The full normative JSON Schema for ATSC v0.1.0 is maintained at:
 
 ```
-https://agent-telemetry-spec.github.io/schemas/agent-telemetry-event/v0.1.0.json
+https://agent-telemetry-spec.github.io/atsc/schemas/v0.1.0/agent-telemetry-event.json
 ```
 
 The schema `$id` is:
@@ -1044,7 +1044,7 @@ The schema `$id` is:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agent-telemetry-spec.github.io/schemas/agent-telemetry-event/v0.1.0.json",
+  "$id": "https://agent-telemetry-spec.github.io/atsc/schemas/v0.1.0/agent-telemetry-event.json",
   "title": "Agent Telemetry Semantic Conventions",
   "description": "ATSC v0.1.0 — vendor-neutral schema for AI agent telemetry. Every record is a valid OTel span.",
   "type": "object",
@@ -1431,5 +1431,5 @@ Initial draft specification. Defines:
 *Agent Telemetry Semantic Conventions is an independent open specification. Contributions welcome. Intent to propose to the OpenTelemetry Semantic Conventions working group pending implementation adoption.*
 
 *Repository: https://github.com/rangepointai/agent-telemetry-spec*  
-*Schema: https://agent-telemetry-spec.github.io/schemas/agent-telemetry-event/v0.1.0.json*  
+*Schema: https://agent-telemetry-spec.github.io/atsc/schemas/v0.1.0/agent-telemetry-event.json*  
 *License: Apache 2.0*

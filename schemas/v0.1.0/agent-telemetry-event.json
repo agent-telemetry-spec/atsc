@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agent-telemetry-spec.github.io/schemas/agent-telemetry-event/v0.1.0.json",
+  "$id": "https://agent-telemetry-spec.github.io/atsc/schemas/v0.1.0/agent-telemetry-event.json",
   "title": "Agent Telemetry Semantic Conventions",
   "description": "ATSC v0.1.0 — vendor-neutral schema for AI agent telemetry. Every record is a valid OTel span. See https://github.com/rangepointai/agent-telemetry-spec for full specification.",
   "type": "object",
