@@ -3,7 +3,7 @@
 **Version:** 0.1.0 — Draft  
 **License:** Apache 2.0  
 **Schema:** `https://agent-telemetry-spec.github.io/schemas/agent-telemetry-event/v0.1.0.json`  
-**Authors:** Jesse Williams
+**Authors:** Jesse Williams, [thegoo](https://github.com/thegoo)
 
 ---
 
