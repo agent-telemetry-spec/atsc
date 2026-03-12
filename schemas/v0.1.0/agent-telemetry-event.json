@@ -1,0 +1,1089 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-telemetry-spec.github.io/schemas/agent-telemetry-event/v0.1.0.json",
+  "title": "Agent Telemetry Semantic Conventions",
+  "description": "ATSC v0.1.0 — vendor-neutral schema for AI agent telemetry. Every record is a valid OTel span. See https://github.com/rangepointai/agent-telemetry-spec for full specification.",
+  "type": "object",
+  "additionalProperties": false,
+
+  "required": [
+    "spec_version",
+    "event_id",
+    "trace_id",
+    "span_id",
+    "span_kind",
+    "timestamp",
+    "start_time",
+    "end_time",
+    "status",
+    "resource",
+    "run"
+  ],
+
+  "properties": {
+
+    "spec_version": {
+      "type": "string",
+      "const": "0.1.0",
+      "description": "ATSC specification version. MUST be '0.1.0'. Enables versioned parsing by receivers."
+    },
+
+    "event_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Globally unique identifier for this record. Used for deduplication across retries and pipeline failures."
+    },
+
+    "trace_id": {
+      "type": "string",
+      "pattern": "^[A-Fa-f0-9]{32}$",
+      "description": "32 hex character W3C TraceContext trace ID. Shared across all spans in a distributed trace."
+    },
+
+    "span_id": {
+      "type": "string",
+      "pattern": "^[A-Fa-f0-9]{16}$",
+      "description": "16 hex character span identifier. Unique within a trace."
+    },
+
+    "parent_span_id": {
+      "oneOf": [
+        { "type": "string", "pattern": "^[A-Fa-f0-9]{16}$" },
+        { "type": "null" }
+      ],
+      "description": "Parent span ID. NULL on root spans only. MUST be set on all non-root spans."
+    },
+
+    "span_kind": {
+      "type": "string",
+      "enum": [
+        "agent.invoke",
+        "agent.turn",
+        "agent.step",
+        "agent.handoff",
+        "llm.chat",
+        "llm.completion",
+        "llm.embed",
+        "tool.call",
+        "tool.mcp",
+        "retrieval.query",
+        "retrieval.fetch",
+        "memory.read",
+        "memory.write",
+        "human.input",
+        "human.review",
+        "human.override",
+        "guardrail.check",
+        "evaluation.run",
+        "infra.cache",
+        "infra.queue",
+        "error"
+      ],
+      "description": "Primary classification of this span. One value from the ATSC taxonomy. Maps to OTel SpanKind per the normative mapping table in the specification."
+    },
+
+    "otel_span_kind": {
+      "type": ["string", "null"],
+      "enum": ["CLIENT", "SERVER", "INTERNAL", "PRODUCER", "CONSUMER", null],
+      "description": "OTel SpanKind. If omitted, receivers derive from span_kind using the normative mapping table."
+    },
+
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 canonical time of this record. Typically equal to start_time."
+    },
+
+    "start_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 datetime. When this span began."
+    },
+
+    "end_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 datetime. When this span ended. MUST be present — ATSC records are complete spans only."
+    },
+
+    "status": {
+      "type": "string",
+      "enum": ["ok", "error", "cancelled", "timeout"],
+      "description": "Outcome of this span. MUST accurately reflect actual outcome — do not default to ok on failure."
+    },
+
+    "trace_state": {
+      "type": ["string", "null"],
+      "description": "W3C TraceContext tracestate header value."
+    },
+
+    "resource": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["service.name"],
+      "description": "Service and infrastructure context. Follows OTel resource conventions.",
+      "properties": {
+        "service.name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Logical service name. MUST be non-empty."
+        },
+        "service.version": {
+          "type": ["string", "null"],
+          "description": "Deployed version of the service."
+        },
+        "service.instance.id": {
+          "type": ["string", "null"],
+          "description": "Unique identifier of this service instance."
+        },
+        "deployment.environment": {
+          "type": ["string", "null"],
+          "description": "e.g. production, staging, development"
+        },
+        "cloud.provider": {
+          "type": ["string", "null"],
+          "description": "e.g. azure, aws, gcp"
+        },
+        "cloud.region": {
+          "type": ["string", "null"],
+          "description": "e.g. eastus, us-east-1"
+        },
+        "host.name": {
+          "type": ["string", "null"],
+          "description": "Hostname of the machine running the agent."
+        }
+      }
+    },
+
+    "session": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "The multi-turn interaction context this span belongs to. Optional. Omit for single-shot batch agents with no user context.",
+      "properties": {
+        "id": {
+          "type": ["string", "null"],
+          "description": "Stable session identifier. Shared across all runs and spans in the session."
+        },
+        "name": {
+          "type": ["string", "null"],
+          "description": "Human readable session label."
+        },
+        "kind": {
+          "type": ["string", "null"],
+          "enum": ["interactive", "background", "scheduled", "event_driven", "other", null]
+        },
+        "state": {
+          "type": ["string", "null"],
+          "enum": ["active", "idle", "paused", "completed", "abandoned", "expired", null]
+        },
+        "started_at": {
+          "oneOf": [
+            { "type": "string", "format": "date-time" },
+            { "type": "null" }
+          ],
+          "description": "ISO 8601. When the session was first created."
+        },
+        "ended_at": {
+          "oneOf": [
+            { "type": "string", "format": "date-time" },
+            { "type": "null" }
+          ],
+          "description": "ISO 8601. When the session ended. NULL if still active."
+        },
+        "turn_count": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Agent turns completed in this session so far."
+        },
+        "run_count": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Runs completed in this session so far."
+        },
+        "resumed": {
+          "type": ["boolean", "null"],
+          "description": "Whether this session was resumed after a gap or interruption."
+        },
+        "resumed_from": {
+          "type": ["string", "null"],
+          "description": "session.id this session was resumed or forked from."
+        },
+        "participant": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "description": "Who or what initiated and is party to this session.",
+          "properties": {
+            "user_id": {
+              "type": ["string", "null"],
+              "description": "Opaque user identifier. SHOULD be pseudonymized when emitting to third-party backends."
+            },
+            "user_role": {
+              "type": ["string", "null"],
+              "enum": ["end_user", "operator", "developer", "system", "other", null]
+            },
+            "anonymous": {
+              "type": ["boolean", "null"],
+              "description": "Whether the participant is unauthenticated."
+            },
+            "organization_id": {
+              "type": ["string", "null"],
+              "description": "Tenant or organization identifier for multi-tenant systems."
+            },
+            "channel": {
+              "type": ["string", "null"],
+              "enum": ["web", "mobile", "api", "cli", "voice", "email", "slack", "teams", "other", null]
+            },
+            "locale": {
+              "type": ["string", "null"],
+              "description": "BCP 47 language tag. e.g. en-US"
+            },
+            "timezone": {
+              "type": ["string", "null"],
+              "description": "IANA timezone. e.g. America/New_York"
+            }
+          }
+        },
+        "context": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "description": "Persistent context carried across runs within this session.",
+          "properties": {
+            "memory_store_id": {
+              "type": ["string", "null"],
+              "description": "Identifier of the memory store scoped to this session."
+            },
+            "variables": {
+              "type": ["object", "null"],
+              "additionalProperties": true,
+              "description": "Session-scoped variables. High sensitivity — apply redaction rules."
+            },
+            "tags": {
+              "type": ["array", "null"],
+              "items": { "type": "string" },
+              "description": "Freeform string labels for filtering and grouping."
+            },
+            "token_budget": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "description": "Total token budget for this session if constrained."
+            },
+            "tokens_consumed": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "description": "Cumulative tokens used across all runs in this session."
+            },
+            "cost_usd_accumulated": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "description": "Cumulative cost across all runs. Adapter-computed. Accuracy not guaranteed."
+            }
+          }
+        }
+      }
+    },
+
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind"],
+      "description": "One logical agent execution. All spans in a run MUST share the same run.id.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable run identifier. Shared across all spans in this run. A UUID generated at run start is sufficient."
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["agent", "workflow", "session", "task"],
+          "description": "agent: autonomous agent with reasoning loop. workflow: deterministic/semi-deterministic orchestration. session: multi-turn interaction spanning multiple runs. task: discrete bounded unit of dispatched work."
+        },
+        "name": {
+          "type": ["string", "null"],
+          "description": "Human readable run label."
+        },
+        "attempt": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Retry attempt number. 1 = first attempt. Allows correlation of retried runs sharing the same run.id."
+        }
+      }
+    },
+
+    "caller": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "The agent or system that initiated this span.",
+      "properties": {
+        "type": {
+          "type": ["string", "null"],
+          "enum": ["agent", "tool", "model", "system", "user", null]
+        },
+        "id": {
+          "type": ["string", "null"],
+          "description": "Unique identifier of the calling agent or system."
+        },
+        "name": {
+          "type": ["string", "null"],
+          "description": "Human readable name."
+        },
+        "framework": {
+          "type": ["string", "null"],
+          "description": "e.g. langgraph, semantic_kernel, autogen, custom"
+        },
+        "version": {
+          "type": ["string", "null"],
+          "description": "Version of the agent or framework."
+        }
+      }
+    },
+
+    "executor": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "The agent or system performing the work in this span. For most single-agent spans, identical to caller.",
+      "properties": {
+        "type": {
+          "type": ["string", "null"],
+          "enum": ["agent", "tool", "model", "system", "user", null]
+        },
+        "id": {
+          "type": ["string", "null"],
+          "description": "Unique identifier of the executing agent or system."
+        },
+        "name": {
+          "type": ["string", "null"],
+          "description": "Human readable name."
+        },
+        "framework": {
+          "type": ["string", "null"],
+          "description": "e.g. langgraph, semantic_kernel, autogen, custom"
+        },
+        "version": {
+          "type": ["string", "null"],
+          "description": "Version of the agent or framework."
+        }
+      }
+    },
+
+    "model": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "LLM call details. Populate on llm.chat, llm.completion, llm.embed spans.",
+      "properties": {
+        "provider": {
+          "type": ["string", "null"],
+          "description": "e.g. openai, azure_openai, anthropic, google, mistral"
+        },
+        "name": {
+          "type": ["string", "null"],
+          "description": "Model name as returned by provider. e.g. gpt-4o, claude-3-5-sonnet"
+        },
+        "request_id": {
+          "type": ["string", "null"],
+          "description": "Provider-assigned request identifier."
+        },
+        "temperature": {
+          "type": ["number", "null"],
+          "description": "Sampling temperature used."
+        },
+        "max_tokens": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Max tokens requested."
+        },
+        "input_tokens": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Prompt tokens consumed. Omit only if provider does not return usage."
+        },
+        "output_tokens": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Completion tokens generated. Omit only if provider does not return usage."
+        },
+        "total_tokens": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Total tokens. MAY be derived from input + output."
+        },
+        "cost_usd": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "Adapter-computed cost estimate. Accuracy not guaranteed. Not a billing source of truth."
+        }
+      }
+    },
+
+    "tool": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Tool invocation details. Populate on tool.call and tool.mcp spans.",
+      "properties": {
+        "name": {
+          "type": ["string", "null"],
+          "description": "Tool name. SHOULD never be omitted — tool name is always known at invocation."
+        },
+        "type": {
+          "type": ["string", "null"],
+          "enum": ["function", "extension", "datastore", null],
+          "description": "function: client-side execution. extension: agent-side external API. datastore: retrieval-augmented access."
+        },
+        "version": {
+          "type": ["string", "null"],
+          "description": "Tool version."
+        },
+        "target": {
+          "type": ["string", "null"],
+          "description": "The endpoint, function path, or resource the tool acts on."
+        },
+        "success": {
+          "type": ["boolean", "null"],
+          "description": "Whether the tool invocation succeeded."
+        }
+      }
+    },
+
+    "retrieval": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Retrieval operation details. Populate on retrieval.query and retrieval.fetch spans.",
+      "properties": {
+        "store": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "id": { "type": ["string", "null"], "description": "Identifier of the retrieval store." },
+            "type": {
+              "type": ["string", "null"],
+              "enum": ["vector", "keyword", "hybrid", "graph", "sql", "document", "web", "other", null]
+            },
+            "provider": {
+              "type": ["string", "null"],
+              "description": "e.g. pinecone, weaviate, opensearch, postgres, bing"
+            },
+            "index": { "type": ["string", "null"], "description": "Index or collection name." }
+          }
+        },
+        "query": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "text": {
+              "type": ["string", "null"],
+              "description": "The query sent verbatim. Omit only if contains PII and redaction is not configured."
+            },
+            "embedding_model": { "type": ["string", "null"], "description": "Model used to embed the query." },
+            "top_k": { "type": ["integer", "null"], "minimum": 1 },
+            "similarity_threshold": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+            "filters": {
+              "type": ["object", "null"],
+              "additionalProperties": true,
+              "description": "Metadata filters applied to the search."
+            },
+            "hybrid_alpha": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "maximum": 1,
+              "description": "0-1 weighting between vector and keyword for hybrid search."
+            }
+          }
+        },
+        "results": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "result_count": { "type": ["integer", "null"], "minimum": 0, "description": "Total results returned by the store." },
+            "returned_count": { "type": ["integer", "null"], "minimum": 0, "description": "Results after threshold filtering." },
+            "reranked": { "type": ["boolean", "null"] },
+            "rerank_model": { "type": ["string", "null"] },
+            "top_score": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "Similarity score of top result." },
+            "min_score": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "Similarity score of lowest returned result." },
+            "mean_score": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "Mean similarity score across returned results." },
+            "threshold_misses": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "description": "Results retrieved but dropped below similarity threshold. High values indicate threshold tuning opportunity."
+            },
+            "documents": {
+              "type": ["array", "null"],
+              "description": "Retrieved documents. MAY be omitted for volume or privacy.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": { "type": ["string", "null"] },
+                  "score": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+                  "rank": { "type": ["integer", "null"], "minimum": 1, "description": "Position in result set. 1-indexed." },
+                  "source": { "type": ["string", "null"], "description": "Document origin URI or identifier." },
+                  "chunk_id": { "type": ["string", "null"] },
+                  "mime_type": { "type": ["string", "null"] },
+                  "token_count": { "type": ["integer", "null"], "minimum": 0 },
+                  "redacted": { "type": ["boolean", "null"], "description": "Whether document content was redacted before recording." }
+                }
+              }
+            }
+          }
+        },
+        "performance": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "embed_latency_ms": { "type": ["integer", "null"], "minimum": 0 },
+            "search_latency_ms": { "type": ["integer", "null"], "minimum": 0 },
+            "rerank_latency_ms": { "type": ["integer", "null"], "minimum": 0 },
+            "total_latency_ms": { "type": ["integer", "null"], "minimum": 0 }
+          }
+        }
+      }
+    },
+
+    "memory": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Memory operation details. Populate on memory.read and memory.write spans. Agent-owned stores only — see retrieval for external knowledge sources.",
+      "properties": {
+        "store": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "id": { "type": ["string", "null"] },
+            "type": {
+              "type": ["string", "null"],
+              "enum": ["in_context", "vector", "key_value", "document", "episodic", "semantic", "other", null]
+            },
+            "provider": {
+              "type": ["string", "null"],
+              "description": "e.g. redis, pinecone, postgres, in_process"
+            },
+            "scope": {
+              "type": ["string", "null"],
+              "enum": ["session", "user", "agent", "global", "run", null],
+              "description": "Lifetime and visibility of this memory store."
+            }
+          }
+        },
+        "operation": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "key": { "type": ["string", "null"], "description": "Explicit key for key/value stores." },
+            "query": { "type": ["string", "null"], "description": "Semantic query for similarity-based retrieval." },
+            "namespace": { "type": ["string", "null"], "description": "Logical partition within the store." },
+            "top_k": { "type": ["integer", "null"], "minimum": 1 },
+            "similarity_threshold": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+            "ttl_seconds": { "type": ["integer", "null"], "minimum": 0, "description": "Time-to-live for write operations." },
+            "overwrite": { "type": ["boolean", "null"], "description": "Whether write overwrote an existing value." }
+          }
+        },
+        "result": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "description": "Read operations only.",
+          "properties": {
+            "hit": { "type": ["boolean", "null"], "description": "Whether memory was found." },
+            "result_count": { "type": ["integer", "null"], "minimum": 0 },
+            "token_count": { "type": ["integer", "null"], "minimum": 0 },
+            "freshness": {
+              "type": ["string", "null"],
+              "enum": ["fresh", "stale", "expired", null]
+            },
+            "source_run_id": {
+              "type": ["string", "null"],
+              "description": "run.id of the run that originally wrote this memory. Enables memory lineage tracing."
+            },
+            "source_span_id": {
+              "type": ["string", "null"],
+              "description": "span_id of the span that originally wrote this memory."
+            }
+          }
+        },
+        "content": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "description": "Memory payload metadata. Treat as sensitive — apply redaction rules.",
+          "properties": {
+            "summary": { "type": ["string", "null"], "description": "Human readable description of stored or retrieved content." },
+            "mime_type": { "type": ["string", "null"] },
+            "token_count": { "type": ["integer", "null"], "minimum": 0 },
+            "redacted": { "type": ["boolean", "null"], "description": "Whether content was redacted before recording." }
+          }
+        }
+      }
+    },
+
+    "handoff": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Agent-to-agent handoff details. Populate on agent.handoff spans.",
+      "properties": {
+        "pattern": {
+          "type": ["string", "null"],
+          "enum": ["orchestrator", "pipeline", "collaborative", "fallback", null],
+          "description": "orchestrator: caller retains control, expects result back. pipeline: fire and forget, separate trace. collaborative: peer agents, shared run.id. fallback: error recovery transfer."
+        },
+        "reason": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "type": ["string", "null"],
+              "enum": ["specialization", "capacity", "policy", "error_recovery", "escalation", "task_complete", "capability_gap", "other", null]
+            },
+            "detail": { "type": ["string", "null"], "description": "Free text explanation of why handoff occurred." }
+          }
+        },
+        "target": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "agent_id": { "type": ["string", "null"] },
+            "agent_name": { "type": ["string", "null"] },
+            "framework": { "type": ["string", "null"] },
+            "version": { "type": ["string", "null"] },
+            "endpoint": { "type": ["string", "null"], "description": "Network address if target is remote." },
+            "invoke_span_id": {
+              "type": ["string", "null"],
+              "description": "span_id of the target agent's agent.invoke span if known."
+            }
+          }
+        },
+        "context_transfer": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "strategy": {
+              "type": ["string", "null"],
+              "enum": ["full_history", "summary", "task_only", "state_snapshot", "none", null]
+            },
+            "summary": { "type": ["string", "null"] },
+            "included_span_ids": {
+              "type": ["array", "null"],
+              "items": { "type": "string" },
+              "description": "span_id values of spans whose outputs were included in context transfer."
+            },
+            "token_count": { "type": ["integer", "null"], "minimum": 0 },
+            "truncated": { "type": ["boolean", "null"] }
+          }
+        },
+        "outcome": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "accepted": { "type": ["boolean", "null"] },
+            "returned": { "type": ["boolean", "null"] },
+            "return_span_id": {
+              "type": ["string", "null"],
+              "description": "span_id where control returned — orchestrator pattern."
+            },
+            "result_summary": { "type": ["string", "null"] },
+            "failure_reason": {
+              "type": ["string", "null"],
+              "enum": ["target_unavailable", "target_rejected", "timeout", "capability_mismatch", "context_too_large", "other", null]
+            }
+          }
+        }
+      }
+    },
+
+    "human": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Human-in-the-loop details. Populate on human.input, human.review, human.override spans. High sensitivity — apply redaction rules per Section 11 of the specification.",
+      "properties": {
+        "trigger": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "reason": {
+              "type": ["string", "null"],
+              "enum": ["confidence_threshold", "policy_rule", "tool_risk", "explicit_request", "error_recovery", "escalation", "scheduled_review", "other", null]
+            },
+            "reason_detail": { "type": ["string", "null"] },
+            "triggered_by": {
+              "type": ["string", "null"],
+              "description": "span_id of the span that caused HITL invocation. Links HITL to its cause."
+            },
+            "confidence_score": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Agent confidence 0-1 if threshold-triggered."
+            }
+          }
+        },
+        "assignment": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "assignee_id": {
+              "type": ["string", "null"],
+              "description": "Identifier of assigned human. SHOULD be pseudonymized."
+            },
+            "assignee_role": {
+              "type": ["string", "null"],
+              "enum": ["operator", "reviewer", "approver", "end_user", "supervisor", "other", null]
+            },
+            "queue": { "type": ["string", "null"], "description": "Work queue or team the task was routed to." },
+            "deadline": {
+              "oneOf": [
+                { "type": "string", "format": "date-time" },
+                { "type": "null" }
+              ]
+            },
+            "notified_at": {
+              "oneOf": [
+                { "type": "string", "format": "date-time" },
+                { "type": "null" }
+              ]
+            }
+          }
+        },
+        "context": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "description": "What was presented to the human when HITL was triggered.",
+          "properties": {
+            "prompt": { "type": ["string", "null"], "description": "The instruction or question posed to the human." },
+            "interface": {
+              "type": ["string", "null"],
+              "enum": ["chat", "form", "email", "dashboard", "api", "other", null]
+            },
+            "options_presented": {
+              "type": ["array", "null"],
+              "items": { "type": "string" }
+            },
+            "shared_content": {
+              "type": ["object", "null"],
+              "additionalProperties": false,
+              "description": "Agent state and data handed to the human. High sensitivity.",
+              "properties": {
+                "agent_output": {
+                  "type": ["string", "null"],
+                  "description": "What the agent produced that triggered review — verbatim."
+                },
+                "agent_reasoning": {
+                  "type": ["string", "null"],
+                  "description": "Agent chain-of-thought or explanation if available."
+                },
+                "tool_results": {
+                  "type": ["array", "null"],
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "tool_name": { "type": ["string", "null"] },
+                      "span_id": { "type": ["string", "null"] },
+                      "output": { "type": ["string", "null"] }
+                    }
+                  }
+                },
+                "conversation_context": {
+                  "type": ["string", "null"],
+                  "description": "Relevant conversation history shown to the human."
+                },
+                "error_detail": {
+                  "type": ["string", "null"],
+                  "description": "Error or failure information shown if model or tool failed."
+                },
+                "confidence_context": {
+                  "type": ["string", "null"],
+                  "description": "Confidence scores or uncertainty signals surfaced to human."
+                },
+                "attachments": {
+                  "type": ["array", "null"],
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "name": { "type": ["string", "null"] },
+                      "mime_type": { "type": ["string", "null"] },
+                      "uri": { "type": ["string", "null"] },
+                      "size_bytes": { "type": ["integer", "null"], "minimum": 0 }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "response": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "description": "What the human did.",
+          "properties": {
+            "action": {
+              "type": ["string", "null"],
+              "enum": ["approved", "rejected", "modified", "escalated", "abandoned", "timed_out", null]
+            },
+            "text": {
+              "type": ["string", "null"],
+              "description": "Free text response — comments, instructions, corrections."
+            },
+            "structured": {
+              "type": ["object", "null"],
+              "additionalProperties": true,
+              "description": "Structured form submission or API response. Shape is caller-defined."
+            },
+            "selection": {
+              "type": ["string", "null"],
+              "description": "Which option was selected from options_presented."
+            },
+            "responded_at": {
+              "oneOf": [
+                { "type": "string", "format": "date-time" },
+                { "type": "null" }
+              ]
+            },
+            "latency_ms": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "description": "Time from human notification to response submission."
+            },
+            "modified_fields": {
+              "type": ["array", "null"],
+              "items": { "type": "string" },
+              "description": "For modified action — which fields the human changed."
+            },
+            "modified_values": {
+              "type": ["object", "null"],
+              "additionalProperties": false,
+              "description": "Before and after values for modified fields.",
+              "properties": {
+                "before": { "type": ["object", "null"], "additionalProperties": true },
+                "after": { "type": ["object", "null"], "additionalProperties": true }
+              }
+            }
+          }
+        },
+        "audit": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "description": "Compliance and audit trail. SHOULD be populated for human.override spans.",
+          "properties": {
+            "actor_verified": {
+              "type": ["boolean", "null"],
+              "description": "Whether the human's identity was verified before action."
+            },
+            "verification_method": {
+              "type": ["string", "null"],
+              "enum": ["sso", "mfa", "api_key", "none", null]
+            },
+            "ip_address": {
+              "type": ["string", "null"],
+              "description": "Network origin. MAY be redacted."
+            },
+            "session_id": {
+              "type": ["string", "null"],
+              "description": "Human's application session identifier."
+            },
+            "signature": {
+              "type": ["string", "null"],
+              "description": "Cryptographic signature for tamper-evidence."
+            }
+          }
+        }
+      }
+    },
+
+    "guardrail": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Guardrail evaluation details. Populate on guardrail.check spans. For instantaneous guardrail events within another span use the guardrail.triggered span event instead.",
+      "properties": {
+        "name": { "type": ["string", "null"] },
+        "policy": { "type": ["string", "null"], "description": "Policy or rule that was evaluated." },
+        "triggered": { "type": ["boolean", "null"], "description": "Whether the guardrail fired." },
+        "action": {
+          "type": ["string", "null"],
+          "enum": ["allow", "block", "warn", "redact", "escalate", null]
+        },
+        "score": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence score of guardrail evaluation."
+        },
+        "categories": {
+          "type": ["array", "null"],
+          "items": { "type": "string" },
+          "description": "Policy categories evaluated. e.g. pii, toxicity, hallucination"
+        }
+      }
+    },
+
+    "evaluation": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Evaluation scoring details. Populate on evaluation.run spans.",
+      "properties": {
+        "name": {
+          "type": ["string", "null"],
+          "description": "Evaluation name. e.g. faithfulness, relevance, groundedness"
+        },
+        "score": { "type": ["number", "null"] },
+        "label": {
+          "type": ["string", "null"],
+          "description": "Categorical label. e.g. pass, fail, hallucination"
+        },
+        "passed": { "type": ["boolean", "null"] },
+        "threshold": { "type": ["number", "null"], "description": "Score threshold for pass/fail." },
+        "evaluator": {
+          "type": ["string", "null"],
+          "description": "What performed the evaluation. e.g. gpt-4o, human, heuristic"
+        },
+        "explanation": {
+          "type": ["string", "null"],
+          "description": "Evaluator reasoning or justification."
+        }
+      }
+    },
+
+    "error": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Error details. Populate on error spans or any span with status error.",
+      "properties": {
+        "type": { "type": ["string", "null"], "description": "Exception class or error category." },
+        "message": { "type": ["string", "null"] },
+        "stacktrace": { "type": ["string", "null"] },
+        "code": { "type": ["string", "null"], "description": "Provider or system error code." },
+        "retryable": { "type": ["boolean", "null"], "description": "Whether the operation can be retried." }
+      }
+    },
+
+    "input": {
+      "type": ["object", "null"],
+      "additionalProperties": true,
+      "description": "Span input content. High sensitivity — apply redaction rules before external export.",
+      "properties": {
+        "mime_type": { "type": ["string", "null"] },
+        "value": { "description": "Input payload. Untyped — MAY be string, object, or array." }
+      }
+    },
+
+    "output": {
+      "type": ["object", "null"],
+      "additionalProperties": true,
+      "description": "Span output content. High sensitivity — apply redaction rules before external export.",
+      "properties": {
+        "mime_type": { "type": ["string", "null"] },
+        "value": { "description": "Output payload. Untyped — MAY be string, object, or array." }
+      }
+    },
+
+    "span_events": {
+      "type": ["array", "null"],
+      "description": "Point-in-time occurrences within this span. No duration. Not independently queryable. See Section 8 of the specification for the full event taxonomy.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "timestamp"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Event name from taxonomy or namespaced custom value. Core: flat name. Extension: framework.name. Vendor: vendor.name. Custom: x.name."
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sequence": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "description": "Monotonic order within span. Use when event ordering matters for debugging."
+          },
+          "attributes": {
+            "type": ["object", "null"],
+            "additionalProperties": false,
+            "description": "Event-specific attributes.",
+            "properties": {
+              "message":                  { "type": ["string", "null"] },
+              "latency_ms":               { "type": ["integer", "null"], "minimum": 0 },
+
+              "thought.content":          { "type": ["string", "null"] },
+              "thought.type":             { "type": ["string", "null"], "enum": ["reasoning", "reflection", "planning", "critique", null] },
+
+              "decision.choice":          { "type": ["string", "null"] },
+              "decision.rationale":       { "type": ["string", "null"] },
+              "decision.confidence":      { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+              "decision.alternatives":    { "type": ["array", "null"], "items": { "type": "string" } },
+
+              "plan.steps":               { "type": ["array", "null"], "items": { "type": "string" } },
+              "plan.revision_reason":     { "type": ["string", "null"] },
+
+              "retry.attempt":            { "type": ["integer", "null"], "minimum": 1 },
+              "retry.max_attempts":       { "type": ["integer", "null"], "minimum": 1 },
+              "retry.delay_ms":           { "type": ["integer", "null"], "minimum": 0 },
+              "retry.reason":             { "type": ["string", "null"] },
+
+              "token.count":              { "type": ["integer", "null"], "minimum": 0 },
+              "token.limit":              { "type": ["integer", "null"], "minimum": 0 },
+              "token.percent_used":       { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+
+              "tool.name":                { "type": ["string", "null"] },
+              "tool.reason":              { "type": ["string", "null"] },
+
+              "guardrail.name":           { "type": ["string", "null"] },
+              "guardrail.policy":         { "type": ["string", "null"] },
+              "guardrail.action":         { "type": ["string", "null"], "enum": ["allow", "block", "warn", "redact", "escalate", null] },
+              "guardrail.score":          { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+
+              "node.id":                  { "type": ["string", "null"] },
+              "node.type":                { "type": ["string", "null"] },
+              "edge.from":                { "type": ["string", "null"] },
+              "edge.to":                  { "type": ["string", "null"] },
+              "state.keys_modified":      { "type": ["array", "null"], "items": { "type": "string" } },
+
+              "score.name":               { "type": ["string", "null"] },
+              "score.value":              { "type": ["number", "null"] },
+              "score.threshold":          { "type": ["number", "null"] },
+              "score.passed":             { "type": ["boolean", "null"] },
+
+              "exception.type":           { "type": ["string", "null"] },
+              "exception.message":        { "type": ["string", "null"] },
+              "exception.stacktrace":     { "type": ["string", "null"] },
+              "exception.escaped":        { "type": ["boolean", "null"] },
+
+              "http.status_code":         { "type": ["integer", "null"] },
+              "http.url":                 { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+
+    "links": {
+      "type": ["array", "null"],
+      "description": "Cross-trace span links. Use for pipeline handoffs, async operations, forked sessions, and causal relationships not expressible as parent/child.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["trace_id", "span_id"],
+        "properties": {
+          "trace_id": {
+            "type": "string",
+            "pattern": "^[A-Fa-f0-9]{32}$"
+          },
+          "span_id": {
+            "type": "string",
+            "pattern": "^[A-Fa-f0-9]{16}$"
+          },
+          "attributes": {
+            "type": ["object", "null"],
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+
+    "attributes": {
+      "type": ["object", "null"],
+      "description": "Extension and vendor-specific attributes. Use namespaced keys: {framework}.*, {vendor}.*, x.* for custom. Using attributes for fields defined in the core schema is a conformance violation for MUST and SHOULD fields.",
+      "additionalProperties": {
+        "type": ["string", "number", "integer", "boolean", "null", "array", "object"]
+      }
+    }
+
+  }
+}
