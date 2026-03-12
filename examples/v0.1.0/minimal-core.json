@@ -1,0 +1,20 @@
+{
+  "$schema": "https://agent-telemetry-spec.github.io/atsc/schemas/v0.1.0/agent-telemetry-event.json",
+  "spec_version": "0.1.0",
+  "event_id": "01HZ1234567890ABCDEFGHIJ",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "span_id": "00f067aa0ba902b7",
+  "parent_span_id": null,
+  "span_kind": "agent.invoke",
+  "timestamp": "2026-03-12T09:00:00.000Z",
+  "start_time": "2026-03-12T09:00:00.000Z",
+  "end_time": "2026-03-12T09:00:03.417Z",
+  "status": "ok",
+  "resource": {
+    "service.name": "my-agent"
+  },
+  "run": {
+    "id": "run_abc123",
+    "kind": "agent"
+  }
+}
